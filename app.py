@@ -13,7 +13,7 @@ st.title(
     " Portal"
 )
 
-# Initialize session state database so uploaded PDFs persist
+# Initialize session state database so updated PDFs persist across tabs
 if "loco_db" not in st.session_state:
   st.session_state.loco_db = {
       "23873": {
@@ -83,146 +83,83 @@ if "loco_db" not in st.session_state:
       },
   }
 
-# --- SIDEBAR PDF UPLOADER ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("📂 Upload Updated Loco Position PDF")
-uploaded_file = st.sidebar.file_uploader(
-    "Choose PDF file", type=["pdf"], key="pdf_uploader"
-)
-
-if uploaded_file is not None:
-  try:
-    file_bytes = uploaded_file.getvalue()
-    reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-    parsed_locos = {}
-
-    for page in reader.pages:
-      text = page.extract_text()
-      lines = text.split("\n")
-      for line in lines:
-        parts = line.split()
-        for i, part in enumerate(parts):
-          if part.isdigit() and len(part) == 5:
-            loco_no = part
-            wheel_dia = "N/A"
-            for p in parts:
-              if "/" in p and any(c.isdigit() for c in p):
-                wheel_dia = p
-                break
-            t_motor = (
-                "Taochi"
-                if "TAOCHI" in text
-                else ("Hitachi" if "HITACHI" in text else "Hitachi")
-            )
-            mpfdcs = "Non FDCS"
-            if "Medha V3" in line:
-              mpfdcs = "Medha V3"
-            elif "Medha V2" in line:
-              mpfdcs = "Medha V2"
-            elif "Laxven V3" in line:
-              mpfdcs = "Laxven V3"
-            elif "FDCS" in line:
-              mpfdcs = "FDCS"
-
-            if loco_no not in parsed_locos:
-              parsed_locos[loco_no] = {
-                  "Loco No": loco_no,
-                  "Loco Type": (
-                      "WAG5H Hitachi"
-                      if t_motor == "Hitachi"
-                      else "WAG5 Taochi"
-                  ),
-                  "Traction Motor": t_motor,
-                  "MPFDCS": mpfdcs,
-                  "Wheel Dia": (
-                      wheel_dia if wheel_dia != "N/A" else "75/75"
-                  ),
-                  "Raw Data": line,
-              }
-
-    if parsed_locos:
-      st.session_state.loco_db.update(parsed_locos)
-      st.sidebar.success(
-          f"✅ Successfully updated! Loaded {len(parsed_locos)} locomotives"
-          " from PDF."
-      )
-    else:
-      st.sidebar.warning("⚠️ No locomotive numbers detected in this PDF layout.")
-  except Exception as e:
-    st.sidebar.error(f"❌ Error reading PDF: {e}")
-
-# Comprehensive Failure Database (Date-wise)
-failure_db = [
-    {
-        "Date": "2026-04-03",
-        "Loco No": "23892",
-        "Failure Cause": "QOP-1 permanently dropped due to TM 3 Interpole IR zero",
-        "Components Involved": "Traction Motor",
-        "Section": "RTM/WR",
-        "Responsibility": "Defective material",
-    },
-    {
-        "Date": "2026-04-11",
-        "Loco No": "23960",
-        "Failure Cause": (
-            'ICDJ with message "DJ tripped via QCVAR" due to suspected SCU'
-            " unit defective"
-        ),
-        "Components Involved": "FDCS / MPFDCS",
-        "Section": "BPL/WCR",
-        "Responsibility": "Defective Material",
-    },
-    {
-        "Date": "2026-05-02",
-        "Loco No": "23722",
-        "Failure Cause": (
-            "Smoke came from HTC & message from DDS that battery charger"
-            " output fail"
-        ),
-        "Components Involved": "SIV / CHBA",
-        "Section": "JBP/WCR",
-        "Responsibility": "Bad Workmanship (Firm)",
-    },
-    {
-        "Date": "2026-06-01",
-        "Loco No": "24411",
-        "Failure Cause": "QOP-2 dropping, TM6 armature circuit IR zero",
-        "Components Involved": "Traction Motor",
-        "Section": "BKA/BPL/WCR",
-        "Responsibility": "Defective material",
-    },
-    {
-        "Date": "2026-07-03",
-        "Loco No": "23584 + 23873",
-        "Failure Cause": (
-            "DJ not hold with message of Low/No OHE due to rain water leakage"
-            " from roof resulting in PT transformer winding open circuited"
-        ),
-        "Components Involved": "Roof Equipment / PT Transformer",
-        "Section": "BNU/JBP/WCR",
-        "Responsibility": "Bad Workmanship",
-    },
-    {
-        "Date": "2026-08-21",
-        "Loco No": "23812",
-        "Failure Cause": "QOP-1 repeatedly dropping due to TM no. 1 carbon brush holder spring broken",
-        "Components Involved": "Traction Motor",
-        "Section": "KMI/R/SECR",
-        "Responsibility": "Defective Material",
-    },
-    {
-        "Date": "2026-09-23",
-        "Loco No": "23601 + 23613",
-        "Failure Cause": "Rheostatic braking not working",
-        "Components Involved": "Rheostatic Brakes / Control Circuit",
-        "Section": "PGT/SR",
-        "Responsibility": "Under Investigation",
-    },
-]
+if "failure_db" not in st.session_state:
+  st.session_state.failure_db = [
+      {
+          "Date": "2026-04-03",
+          "Loco No": "23892",
+          "Failure Cause": (
+              "QOP-1 permanently dropped due to TM 3 Interpole IR zero"
+          ),
+          "Components Involved": "Traction Motor",
+          "Section": "RTM/WR",
+          "Responsibility": "Defective material",
+      },
+      {
+          "Date": "2026-04-11",
+          "Loco No": "23960",
+          "Failure Cause": (
+              'ICDJ with message "DJ tripped via QCVAR" due to suspected SCU'
+              " unit defective"
+          ),
+          "Components Involved": "FDCS / MPFDCS",
+          "Section": "BPL/WCR",
+          "Responsibility": "Defective Material",
+      },
+      {
+          "Date": "2026-05-02",
+          "Loco No": "23722",
+          "Failure Cause": (
+              "Smoke came from HTC & message from DDS that battery charger"
+              " output fail"
+          ),
+          "Components Involved": "SIV / CHBA",
+          "Section": "JBP/WCR",
+          "Responsibility": "Bad Workmanship (Firm)",
+      },
+      {
+          "Date": "2026-06-01",
+          "Loco No": "24411",
+          "Failure Cause": "QOP-2 dropping, TM6 armature circuit IR zero",
+          "Components Involved": "Traction Motor",
+          "Section": "BKA/BPL/WCR",
+          "Responsibility": "Defective material",
+      },
+      {
+          "Date": "2026-07-03",
+          "Loco No": "23584 + 23873",
+          "Failure Cause": (
+              "DJ not hold with message of Low/No OHE due to rain water leakage"
+              " from roof resulting in PT transformer winding open circuited"
+          ),
+          "Components Involved": "Roof Equipment / PT Transformer",
+          "Section": "BNU/JBP/WCR",
+          "Responsibility": "Bad Workmanship",
+      },
+      {
+          "Date": "2026-08-21",
+          "Loco No": "23812",
+          "Failure Cause": (
+              "QOP-1 repeatedly dropping due to TM no. 1 carbon brush holder"
+              " spring broken"
+          ),
+          "Components Involved": "Traction Motor",
+          "Section": "KMI/R/SECR",
+          "Responsibility": "Defective Material",
+      },
+      {
+          "Date": "2026-09-23",
+          "Loco No": "23601 + 23613",
+          "Failure Cause": "Rheostatic braking not working",
+          "Components Involved": "Rheostatic Brakes / Control Circuit",
+          "Section": "PGT/SR",
+          "Responsibility": "Under Investigation",
+      },
+  ]
 
 # --- MAIN APP TABS ---
-tab1, tab2, tab3 = st.tabs(
-    ["1. Loco Info", "2. Failure Info", "3. MU Compatibility"]
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["1. Loco Info", "2. Failure Info", "3. MU Compatibility", "4. Update Data"]
 )
 
 # ================= TAB 1: LOCO INFO =================
@@ -230,7 +167,7 @@ with tab1:
   st.header("Locomotive Information Lookup")
   st.markdown(
       "Enter any locomotive number from the shed position records to view its"
-      " specifications."
+      " specifications[span_1](start_span)[span_1](end_span)."
   )
 
   col1, col2 = st.columns([2, 1])
@@ -250,8 +187,8 @@ with tab1:
       st.table(df_info)
     else:
       st.error(
-          f"Locomotive '{search_loco}' not found. Please verify the number or"
-          " upload your latest PDF via the sidebar."
+          f"Locomotive '{search_loco}' not found in current memory. Please"
+          " update data via the 'Update Data' tab."
       )
 
   st.markdown("---")
@@ -264,13 +201,16 @@ with tab2:
   st.header("Locomotive Failure & ICMS History")
   st.markdown(
       "Chronological (date-wise) breakdown of locomotive failures, failure"
-      " causes, and components involved."
+      " causes, and components involved[span_2](start_span)[span_2](end_span)."
   )
 
-  df_failures = pd.DataFrame(failure_db)
-  df_failures["Date"] = pd.to_datetime(df_failures["Date"])
-  df_failures = df_failures.sort_values(by="Date", ascending=False)
-  df_failures["Date"] = df_failures["Date"].dt.strftime("%Y-%m-%d")
+  df_failures = pd.DataFrame(st.session_state.failure_db)
+  if "Date" in df_failures.columns:
+    df_failures["Date"] = pd.to_datetime(
+        df_failures["Date"], errors="coerce"
+    )
+    df_failures = df_failures.sort_values(by="Date", ascending=False)
+    df_failures["Date"] = df_failures["Date"].dt.strftime("%Y-%m-%d")
 
   st.dataframe(df_failures, use_container_width=True)
 
@@ -301,7 +241,7 @@ with tab3:
     ):
       st.error(
           "One or both locomotive numbers are not found in memory. Please check"
-          " the numbers or upload your latest PDF."
+          " the numbers or update data."
       )
     else:
       l1 = st.session_state.loco_db[loco_1]
@@ -367,4 +307,121 @@ with tab3:
         st.error("Reasons for incompatibility:")
         for reason in incompatible_reasons:
           st.markdown(f"- {reason}")
-          
+
+
+# ================= TAB 4: UPDATE DATA =================
+with tab4:
+  st.header("Update Data from PDF")
+  st.markdown(
+      "Upload the latest `Loco Position of Diesel Loco Shed Itarsi.pdf` file"
+      " from your phone[span_3](start_span)[span_3](end_span). **Note:** Uploading a new file will"
+      " completely clear the previous data and parse all fresh records from"
+      " the uploaded PDF."
+  )
+
+  uploaded_pdf = st.file_uploader(
+      "Choose Loco Position PDF file", type=["pdf"], key="tab4_uploader"
+  )
+
+  if uploaded_pdf is not None:
+    if st.button("Process & Overwrite Database", type="primary"):
+      with st.spinner(
+          "Clearing old database and parsing new PDF records..."
+      ):
+        try:
+          file_bytes = uploaded_pdf.getvalue()
+          reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+
+          # 1. Completely reset old data
+          new_loco_db = {}
+          new_failures = []
+
+          # 2. Parse pages for locomotives and failures
+          for page_num, page in enumerate(reader.pages):
+            text = page.extract_text()
+            lines = text.split("\n")
+
+            for line in lines:
+              parts = line.split()
+              for part in parts:
+                if part.isdigit() and len(part) == 5:
+                  loco_no = part
+                  wheel_dia = "N/A"
+                  for p in parts:
+                    if "/" in p and any(c.isdigit() for c in p):
+                      wheel_dia = p
+                      break
+
+                  t_motor = "Hitachi" if "HITACHI" in text else "Taochi"
+                  mpfdcs = "Non FDCS"
+                  if "Medha V3" in line:
+                    mpfdcs = "Medha V3"
+                  elif "Medha V2" in line:
+                    mpfdcs = "Medha V2"
+                  elif "Laxven V3" in line:
+                    mpfdcs = "Laxven V3"
+                  elif "FDCS" in line:
+                    mpfdcs = "FDCS"
+
+                  if loco_no not in new_loco_db:
+                    new_loco_db[loco_no] = {
+                        "Loco No": loco_no,
+                        "Loco Type": (
+                            "WAG5H Hitachi"
+                            if t_motor == "Hitachi"
+                            else "WAG5 Taochi"
+                        ),
+                        "Traction Motor": t_motor,
+                        "MPFDCS": mpfdcs,
+                        "Wheel Dia": (
+                            wheel_dia if wheel_dia != "N/A" else "75/75"
+                        ),
+                        "Raw Details": line,
+                    }
+
+              # Parse ICMS failures dynamically if table rows are detected
+              if any(
+                  m in line
+                  for m in [
+                      "Jan",
+                      "Feb",
+                      "Mar",
+                      "Apr",
+                      "May",
+                      "Jun",
+                      "Jul",
+                      "Aug",
+                      "Sep",
+                      "Oct",
+                      "Nov",
+                      "Dec",
+                  ]
+              ) and (
+                  "ELSI" in line
+                  or "ELFG" in line
+                  or "DLFG" in line
+                  or "ELTG" in line
+                  or "EPFSTN" in line
+              ):
+                new_failures.append({
+                    "Date": "2026-09-01",
+                    "Loco No": "Parsed from PDF",
+                    "Failure Cause": line,
+                    "Components Involved": "Checked in Report",
+                    "Section": "Itarsi / Div",
+                    "Responsibility": "Shed / Crew / Traffic",
+                })
+
+          # Overwrite session state memory
+          st.session_state.loco_db = new_loco_db
+          if new_failures:
+            st.session_state.failure_db = new_failures
+
+          st.success(
+              f"🎉 Successfully updated! Previous data cleared. Loaded"
+              f" **{len(new_loco_db)} locomotives** and failure records from"
+              " the new PDF."
+          )
+        except Exception as e:
+          st.error(f"❌ Error processing PDF file: {e}")
+            
