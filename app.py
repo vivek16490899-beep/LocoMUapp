@@ -167,7 +167,7 @@ with tab1:
   st.header("Locomotive Information Lookup")
   st.markdown(
       "Enter any locomotive number from the shed position records to view its"
-      " specifications(start_span)(end_span)."
+      " specifications."
   )
 
   col1, col2 = st.columns([2, 1])
