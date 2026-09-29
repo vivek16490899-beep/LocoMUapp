@@ -167,13 +167,14 @@ with tab1:
   st.header("Locomotive Information Lookup")
   st.markdown(
       "Enter any locomotive number from the shed position records to view its"
-      " specifications[span_1](start_span)[span_1](end_span)."
+      " specifications[span_0](start_span)[span_0](end_span)."
   )
 
   col1, col2 = st.columns([2, 1])
   with col1:
     search_loco = st.text_input(
-        "Enter Locomotive Number (e.g., 23873, 24453, 23944)"
+        "Enter Locomotive Number (e.g., 23873, 24453, 23944)",
+        key="loco_search_input",
     ).strip()
   with col2:
     st.markdown("<br>", unsafe_allow_html=True)
@@ -183,8 +184,32 @@ with tab1:
     if search_loco in st.session_state.loco_db:
       info = st.session_state.loco_db[search_loco]
       st.success(f"Locomotive **{search_loco}** found!")
+
+      # 1. General Specifications Table
+      st.subheader("📋 General Specifications")
       df_info = pd.DataFrame(list(info.items()), columns=["Parameter", "Value"])
       st.table(df_info)
+
+      # 2. Detailed Failure Information (Displayed separately below)
+      st.subheader(
+          f"⚠️ Detailed Failure Information for Locomotive {search_loco}"
+      )
+      matched_failures = []
+      for f in st.session_state.failure_db:
+        if search_loco in str(f.get("Loco No", "")) or search_loco in str(
+            f.get("Failure Cause", "")
+        ):
+          matched_failures.append(f)
+
+      if matched_failures:
+        df_loco_failures = pd.DataFrame(matched_failures)
+        st.dataframe(df_loco_failures, use_container_width=True)
+      else:
+        st.info(
+            f"No failure records found matching Locomotive {search_loco} in the"
+            " failure database."
+        )
+
     else:
       st.error(
           f"Locomotive '{search_loco}' not found in current memory. Please"
@@ -201,7 +226,7 @@ with tab2:
   st.header("Locomotive Failure & ICMS History")
   st.markdown(
       "Chronological (date-wise) breakdown of locomotive failures, failure"
-      " causes, and components involved[span_2](start_span)[span_2](end_span)."
+      " causes, and components involved[span_1](start_span)[span_1](end_span)."
   )
 
   df_failures = pd.DataFrame(st.session_state.failure_db)
@@ -314,7 +339,7 @@ with tab4:
   st.header("Update Data from PDF")
   st.markdown(
       "Upload the latest `Loco Position of Diesel Loco Shed Itarsi.pdf` file"
-      " from your phone[span_3](start_span)[span_3](end_span). **Note:** Uploading a new file will"
+      " from your phone[span_2](start_span)[span_2](end_span). **Note:** Uploading a new file will"
       " completely clear the previous data and parse all fresh records from"
       " the uploaded PDF."
   )
@@ -332,11 +357,7 @@ with tab4:
           file_bytes = uploaded_pdf.getvalue()
           reader = pypdf.PdfReader(io.BytesIO(file_bytes))
 
-          # 1. Completely reset old data
           new_loco_db = {}
-          new_failures = []
-
-          # 2. Parse pages for locomotives and failures
           for page_num, page in enumerate(reader.pages):
             text = page.extract_text()
             lines = text.split("\n")
@@ -379,48 +400,10 @@ with tab4:
                         "Raw Details": line,
                     }
 
-              # Parse ICMS failures dynamically if table rows are detected
-              if any(
-                  m in line
-                  for m in [
-                      "Jan",
-                      "Feb",
-                      "Mar",
-                      "Apr",
-                      "May",
-                      "Jun",
-                      "Jul",
-                      "Aug",
-                      "Sep",
-                      "Oct",
-                      "Nov",
-                      "Dec",
-                  ]
-              ) and (
-                  "ELSI" in line
-                  or "ELFG" in line
-                  or "DLFG" in line
-                  or "ELTG" in line
-                  or "EPFSTN" in line
-              ):
-                new_failures.append({
-                    "Date": "2026-09-01",
-                    "Loco No": "Parsed from PDF",
-                    "Failure Cause": line,
-                    "Components Involved": "Checked in Report",
-                    "Section": "Itarsi / Div",
-                    "Responsibility": "Shed / Crew / Traffic",
-                })
-
-          # Overwrite session state memory
           st.session_state.loco_db = new_loco_db
-          if new_failures:
-            st.session_state.failure_db = new_failures
-
           st.success(
               f"🎉 Successfully updated! Previous data cleared. Loaded"
-              f" **{len(new_loco_db)} locomotives** and failure records from"
-              " the new PDF."
+              f" **{len(new_loco_db)} locomotives** from the new PDF."
           )
         except Exception as e:
           st.error(f"❌ Error processing PDF file: {e}")
