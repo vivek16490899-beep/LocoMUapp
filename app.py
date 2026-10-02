@@ -5,17 +5,25 @@ import pypdf
 import streamlit as st
 
 st.set_page_config(
-    page_title="DLS Itarsi Loco Manager", layout="centered", initial_sidebar_state="collapsed"
+    page_title="DLS Itarsi Loco Manager",
+    layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
-# Minimal custom styling to make headings compact on mobile
+# Minimal styling: center align text, fix heading cut-offs, clean mobile padding
 st.markdown(
     """
     <style>
-    h1 { font-size: 22px !important; margin-bottom: 0px !important; }
-    h2 { font-size: 18px !important; }
-    h3 { font-size: 16px !important; }
-    .block-container { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+    .stApp { text-align: center; }
+    h1, h2, h3, p, label, .stTextInput, .stButton, div[data-baseweb="tab"] { text-align: center !important; }
+    .block-container { 
+        padding-top: 1rem !important; 
+        padding-bottom: 2rem !important; 
+        max-width: 600px !important;
+    }
+    /* Center align input fields and tables */
+    .stTextInput > div > div > input { text-align: center; }
+    table { margin-left: auto; margin-right: auto; text-align: left; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -69,7 +77,9 @@ if "failure_db" not in st.session_state:
       {
           "Date": "2026-04-03",
           "Loco No": "23892",
-          "Failure Cause": "QOP-1 permanently dropped due to TM 3 Interpole IR zero",
+          "Failure Cause": (
+              "QOP-1 permanently dropped due to TM 3 Interpole IR zero"
+          ),
           "Components Involved": "Traction Motor",
           "Section": "RTM/WR",
           "Responsibility": "Defective material",
@@ -77,7 +87,10 @@ if "failure_db" not in st.session_state:
       {
           "Date": "2026-05-02",
           "Loco No": "23722",
-          "Failure Cause": "Smoke came from HTC & message from DDS that battery charger output fail",
+          "Failure Cause": (
+              "Smoke came from HTC & message from DDS that battery charger"
+              " output fail"
+          ),
           "Components Involved": "SIV / CHBA",
           "Section": "JBP/WCR",
           "Responsibility": "Bad Workmanship (Firm)",
@@ -85,7 +98,10 @@ if "failure_db" not in st.session_state:
       {
           "Date": "2026-07-03",
           "Loco No": "23584 + 23873",
-          "Failure Cause": "DJ not hold with message of Low/No OHE due to rain water leakage from roof resulting in PT transformer winding open circuited",
+          "Failure Cause": (
+              "DJ not hold with message of Low/No OHE due to rain water leakage"
+              " from roof resulting in PT transformer winding open circuited"
+          ),
           "Components Involved": "Roof Equipment / PT Transformer",
           "Section": "BNU/JBP/WCR",
           "Responsibility": "Bad Workmanship",
@@ -100,16 +116,12 @@ tab1, tab2, tab3, tab4 = st.tabs(
 # ================= TAB 1: LOCO INFO =================
 with tab1:
   st.subheader("Locomotive Information Lookup")
-  st.write("Enter a locomotive number to view its summary and failure details.")
+  st.write("Enter a locomotive number to view summary and failure details.")
 
-  col1, col2 = st.columns([2, 1])
-  with col1:
-    search_loco = st.text_input(
-        "Loco Number (e.g., 23873, 70105)", key="loco_search_input"
-    ).strip()
-  with col2:
-    st.markdown("<br>", unsafe_allow_html=True)
-    find_btn = st.button("Find Info", type="primary")
+  search_loco = st.text_input(
+      "Loco Number (e.g., 23873, 70105)", key="loco_search_input"
+  ).strip()
+  find_btn = st.button("Find Info", type="primary")
 
   if find_btn or search_loco:
     if search_loco in st.session_state.loco_db:
@@ -132,7 +144,6 @@ with tab1:
           if failure_dates
           else "Not involved in recorded failures"
       )
-
       motor_type_display = (
           info.get("Traction Motor", "Hitachi") if is_electric else "N/A"
       )
@@ -199,17 +210,10 @@ with tab2:
 # ================= TAB 3: MU COMPATIBILITY =================
 with tab3:
   st.subheader("MU Compatibility Checker")
-  st.write("Check MU compatibility based on motor type, control system, and wheel tolerance.")
+  st.write("Check MU compatibility based on rules.")
 
-  col1, col2 = st.columns(2)
-  with col1:
-    loco_1 = st.text_input(
-        "Locomotive 1", value="23873", key="mu_l1"
-    ).strip()
-  with col2:
-    loco_2 = st.text_input(
-        "Locomotive 2", value="24453", key="mu_l2"
-    ).strip()
+  loco_1 = st.text_input("Locomotive 1", value="23873", key="mu_l1").strip()
+  loco_2 = st.text_input("Locomotive 2", value="24453", key="mu_l2").strip()
 
   if st.button("Check Compatibility", type="primary"):
     if (
@@ -218,7 +222,7 @@ with tab3:
     ):
       st.error(
           "One or both locomotive numbers are not found in memory. Please check"
-          " the numbers or update data."
+          " numbers or update data."
       )
     else:
       l1 = st.session_state.loco_db[loco_1]
@@ -231,20 +235,24 @@ with tab3:
 
       if l1_is_electric != l2_is_electric:
         incompatible_reasons.append(
-            "Locomotive Type Mismatch: MU formation between a Diesel and an Electric locomotive is not possible."
+            "Locomotive Type Mismatch: MU between Diesel and Electric is not"
+            " possible."
         )
       else:
         if l1_is_electric:
           if l1.get("Traction Motor") != l2.get("Traction Motor"):
             incompatible_reasons.append(
-                f"Traction Motor mismatch: Loco {loco_1} has {l1.get('Traction Motor')} motors while Loco {loco_2} has {l2.get('Traction Motor')} motors."
+                f"Traction Motor mismatch: Loco {loco_1} has"
+                f" {l1.get('Traction Motor')} motors while Loco {loco_2} has"
+                f" {l2.get('Traction Motor')} motors."
             )
 
         l1_non_fdcs = "Non FDCS" in str(l1.get("MPFDCS", ""))
         l2_non_fdcs = "Non FDCS" in str(l2.get("MPFDCS", ""))
         if l1_non_fdcs != l2_non_fdcs:
           incompatible_reasons.append(
-              "Control System mismatch: A Non-FDCS locomotive requires another Non-FDCS locomotive."
+              "Control System mismatch: A Non-FDCS locomotive requires another"
+              " Non-FDCS locomotive."
           )
 
         try:
@@ -258,19 +266,24 @@ with tab3:
 
           if diff1 >= 40 or diff2 >= 40:
             incompatible_reasons.append(
-                f"Wheel diameter difference exceeded limit (>= 40mm): Cab 1 diff is {diff1}mm, Cab 2 diff is {diff2}mm."
+                f"Wheel diameter difference exceeded limit (>= 40mm): Cab 1 diff"
+                f" is {diff1}mm, Cab 2 diff is {diff2}mm."
             )
         except Exception:
           pass
 
       if len(incompatible_reasons) == 0:
         st.markdown(
-            '<div style="padding: 12px; background-color: #d4edda; color: #155724; border-radius: 5px; font-weight: bold;">✅ Yes, MU Compatible</div>',
+            '<div style="padding: 12px; background-color: #d4edda; color:'
+            ' #155724; border-radius: 5px; font-weight: bold; margin-top:'
+            ' 10px;">✅ Yes, MU Compatible</div>',
             unsafe_allow_html=True,
         )
       else:
         st.markdown(
-            '<div style="padding: 12px; background-color: #f8d7da; color: #721c24; border-radius: 5px; font-weight: bold;">❌ MU formation not possible</div>',
+            '<div style="padding: 12px; background-color: #f8d7da; color:'
+            ' #721c24; border-radius: 5px; font-weight: bold; margin-top:'
+            ' 10px;">❌ MU formation not possible</div>',
             unsafe_allow_html=True,
         )
         for reason in incompatible_reasons:
@@ -342,4 +355,3 @@ with tab4:
           )
         except Exception as e:
           st.error(f"❌ Error processing PDF: {e}")
-            
